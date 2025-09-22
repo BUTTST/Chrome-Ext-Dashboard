@@ -81,7 +81,7 @@
 
 4.  **載入擴充功能**
     - 點擊左上方的「載入未封裝項目」按鈕
-    - 瀏覽並選擇您下載的專案資料夾
+    - 瀏覽並選擇您下載的專案資料夾中的 **`extension`** 資料夾
     - 點擊「選取資料夾」完成安裝
 
 5.  **確認安裝成功**
@@ -190,14 +190,17 @@
 
 ### 📁 項目結構
 ```
-├── manifest.json          # 擴充功能配置檔
-├── background.js          # Service Worker
-├── popup.html/js         # 快速彈窗介面
-├── options.html/js       # 主要管理介面
-├── styles/               # CSS 樣式檔案
-│   ├── main.css         # 主要樣式
-│   └── themes.css       # 主題定義
-└── icons/               # 圖標檔案
+.
+├── extension/              # 擴充功能核心檔案
+│   ├── manifest.json       # 擴充功能配置檔
+│   ├── background.js       # Service Worker
+│   ├── popup.html/js      # 快速彈窗介面
+│   ├── options.html/js    # 主要管理介面
+│   ├── styles/            # CSS 樣式檔案
+│   └── icons/             # 圖標檔案
+├── assets/                 # README 圖片資源
+├── README.md               # 專案說明文件
+└── LICENSE                 # 授權協議
 ```
 
 ## 📄 授權
