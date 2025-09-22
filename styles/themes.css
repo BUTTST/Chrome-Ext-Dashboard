@@ -1,0 +1,40 @@
+/* Chrome 擴充功能管理器 - 主題變數 */
+
+:root {
+    /* Monokai Dark Theme (Default) - 較亮的灰底 */
+    --bg-primary: #2b2b2b;
+    --bg-secondary: #3a3a3a;
+    --bg-tertiary: #4a4a4a;
+    --text-primary: #e8e8e8;
+    --text-secondary: #999999;
+    --text-accent: #cccccc;
+    --border-color: #555555;
+    --accent-color: #66d9ef;
+    --warning-color: #f92672;
+    --success-color: #66d9ef;
+    --card-bg: #383838;
+    --sidebar-bg: #333333;
+    --header-bg: #2a2a2a;
+}
+
+[data-theme="light"] {
+    /* Light Theme */
+    --bg-primary: #f5f7fa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #fafbfc;
+    --text-primary: #2c3e50;
+    --text-secondary: #7f8c8d;
+    --text-accent: #3498db;
+    --border-color: #e0e6ed;
+    --accent-color: #3498db;
+    --warning-color: #e74c3c;
+    --success-color: #27ae60;
+    --card-bg: #ffffff;
+    --sidebar-bg: #fafbfc;
+    --header-bg: #2c3e50;
+}
+
+/* 主題切換動畫 */
+*, *::before, *::after {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}

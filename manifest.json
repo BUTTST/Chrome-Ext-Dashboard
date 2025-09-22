@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Chrome 擴充功能管理器",
+  "version": "1.0.0",
+  "description": "個人專屬的Chrome擴充功能管理器，提供直覺、穩定、可客製化的管理體驗",
+  
+  "permissions": [
+    "management",
+    "storage",
+    "tabs"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "擴充功能管理器"
+  },
+  
+  "options_page": "options.html"
+}
