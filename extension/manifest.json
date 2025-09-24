@@ -16,7 +16,18 @@
   
   "action": {
     "default_popup": "popup.html",
-    "default_title": "擴充功能管理器"
+    "default_title": "擴充功能管理器",
+    "default_icon": {
+      "16": "icons/Chrome擴充功能管理器_icon-16.png",
+      "48": "icons/Chrome擴充功能管理器_icon-48.png",
+      "128": "icons/Chrome擴充功能管理器_icon-128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "icons/Chrome擴充功能管理器_icon-16.png",
+    "48": "icons/Chrome擴充功能管理器_icon-48.png",
+    "128": "icons/Chrome擴充功能管理器_icon-128.png"
   },
   
   "options_page": "options.html"

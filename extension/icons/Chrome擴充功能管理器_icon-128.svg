@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+    <title>Chrome擴充功能管理器 Icon 128px (Vibrant Blue)</title>
+    <rect x="8" y="8" width="112" height="112" rx="28" fill="#2196F3"/>
+    <rect x="24" y="56" width="80" height="40" rx="12" fill="#90CAF9" opacity="0.6"/>
+    <rect x="20" y="44" width="88" height="40" rx="12" fill="#90CAF9" opacity="0.8"/>
+    <rect x="16" y="32" width="96" height="40" rx="12" fill="#FFFFFF"/>
+    <rect x="32" y="45.6" width="12" height="12" rx="4" fill="#1E88E5"/>
+    <rect x="52" y="45.6" width="44" height="12" rx="4" fill="#1E88E5" opacity="0.7"/>
+</svg>

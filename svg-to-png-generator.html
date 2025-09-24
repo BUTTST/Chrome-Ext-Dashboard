@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG 轉 PNG 工具 - Chrome 擴充功能圖標</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #f8f8f2;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #2d2d2c;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #66d9ef;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .converter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .icon-converter {
+            background: #3e3e3d;
+            border: 1px solid #66d9ef;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .icon-converter h3 {
+            color: #a6e22e;
+            margin: 0 0 15px 0;
+        }
+        
+        .icon-preview {
+            width: 100%;
+            height: 120px;
+            background: #1e1e1e;
+            border: 1px solid #464645;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .size-label {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #66d9ef;
+            color: #1e1e1e;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        .convert-btn {
+            background: #66d9ef;
+            color: #1e1e1e;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        
+        .convert-btn:hover {
+            background: #4fc3d7;
+            transform: translateY(-1px);
+        }
+        
+        .download-btn {
+            background: #a6e22e;
+            color: #1e1e1e;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        
+        .download-btn:hover {
+            background: #8bc34a;
+            transform: translateY(-1px);
+        }
+        
+        .download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .instructions {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #a6e22e;
+            margin-top: 20px;
+        }
+        
+        .status {
+            margin-top: 10px;
+            font-size: 12px;
+            min-height: 20px;
+        }
+        
+        .success { color: #a6e22e; }
+        .error { color: #f92672; }
+        .info { color: #66d9ef; }
+        
+        canvas {
+            border: 1px solid #66d9ef;
+            border-radius: 4px;
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Chrome 擴充功能圖標轉換器</h1>
+        
+        <div class="converter-grid" id="converterGrid">
+            <!-- 動態生成的轉換器 -->
+        </div>
+        
+        <div class="instructions">
+            <h3 style="color: #a6e22e; margin-top: 0;">📋 使用說明</h3>
+            <ol style="color: #f8f8f2; padding-left: 20px;">
+                <li>點擊「轉換為 PNG」按鈕生成對應尺寸的 PNG 圖標</li>
+                <li>點擊「下載 PNG」按鈕保存圖標到本機</li>
+                <li>將下載的圖標文件放入 <code>extension/icons/</code> 資料夾</li>
+                <li>確保文件命名正確：<code>Chrome擴充功能管理器_icon-{尺寸}.png</code></li>
+                <li>在 Chrome 中重新載入擴充功能</li>
+            </ol>
+            
+            <div style="margin-top: 15px; padding: 10px; background: #2d2d2c; border-radius: 6px;">
+                <strong style="color: #66d9ef;">💡 提示：</strong>
+                <span style="color: #f8f8f2;">PNG 格式比 SVG 有更好的 Chrome 擴充功能兼容性</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SVG 圖標數據
+        const iconSVGs = {
+            16: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+                <defs>
+                    <linearGradient id="bgGradient16" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#2D2D2C"/>
+                        <stop offset="100%" style="stop-color:#464645"/>
+                    </linearGradient>
+                    <linearGradient id="extensionGradient16" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#66D9EF"/>
+                        <stop offset="100%" style="stop-color:#4FC3D7"/>
+                    </linearGradient>
+                    <linearGradient id="toggleGradient16" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#A6E22E"/>
+                        <stop offset="100%" style="stop-color:#8BC34A"/>
+                    </linearGradient>
+                </defs>
+                <rect x="1" y="1" width="14" height="14" rx="3" ry="3" fill="url(#bgGradient16)"/>
+                <g transform="translate(3, 2.5)">
+                    <path d="M0 1 L4 1 L4 0 L5 0 C6 0 7 1 7 2 C7 3 6 4 5 4 L4 4 L4 7 L5 7 C6 7 7 8 7 9 C7 10 6 11 5 11 L4 11 L4 12 L0 12 L0 1 Z" fill="url(#extensionGradient16)"/>
+                    <circle cx="2.5" cy="6.5" r="1" fill="#2D2D2C"/>
+                </g>
+                <g transform="translate(8.5, 2.5)">
+                    <path d="M0 0 L3 0 L3 1.5 L4 1.5 C4.5 1.5 5 2 5 2.5 C5 3 4.5 3.5 4 3.5 L3 3.5 L3 5 L0 5 L0 0 Z" fill="url(#extensionGradient16)" opacity="0.6"/>
+                </g>
+                <circle cx="12" cy="12" r="1.5" fill="url(#toggleGradient16)"/>
+                <circle cx="12" cy="12" r="0.5" fill="#F8F8F2"/>
+            </svg>`,
+            
+            48: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+                <defs>
+                    <linearGradient id="bgGradient48" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#2D2D2C"/>
+                        <stop offset="100%" style="stop-color:#464645"/>
+                    </linearGradient>
+                    <linearGradient id="extensionGradient48" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#66D9EF"/>
+                        <stop offset="100%" style="stop-color:#4FC3D7"/>
+                    </linearGradient>
+                    <linearGradient id="toggleGradient48" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#A6E22E"/>
+                        <stop offset="100%" style="stop-color:#8BC34A"/>
+                    </linearGradient>
+                </defs>
+                <rect x="4" y="4" width="40" height="40" rx="8" ry="8" fill="url(#bgGradient48)"/>
+                <g transform="translate(12, 10)">
+                    <path d="M0 3 L10 3 L10 1 L12 1 C14 1 16 3 16 5 C16 7 14 9 12 9 L10 9 L10 16 L12 16 C14 16 16 18 16 20 C16 22 14 24 12 24 L10 24 L10 26 L0 26 L0 3 Z" fill="url(#extensionGradient48)" stroke="#4FC3D7" stroke-width="1"/>
+                    <circle cx="7" cy="14.5" r="2" fill="#2D2D2C" stroke="#4FC3D7" stroke-width="0.5"/>
+                </g>
+                <g transform="translate(22, 18)">
+                    <path d="M0 0 L8 0 L8 2 L10 2 C12 2 14 4 14 6 C14 8 12 10 10 10 L8 10 L8 14 L0 14 L0 0 Z" fill="url(#extensionGradient48)" opacity="0.7" stroke="#4FC3D7" stroke-width="0.5"/>
+                </g>
+                <g transform="translate(10, 36)">
+                    <rect x="0" y="0" width="12" height="5" rx="2.5" fill="#464645" stroke="#66D9EF" stroke-width="0.5"/>
+                    <circle cx="9.5" cy="2.5" r="1.8" fill="url(#toggleGradient48)"/>
+                    <circle cx="9.5" cy="2.5" r="0.8" fill="#F8F8F2"/>
+                </g>
+                <g transform="translate(28, 36)">
+                    <rect x="0" y="1" width="8" height="3" rx="1" fill="none" stroke="#66D9EF" stroke-width="0.5"/>
+                    <line x1="1" y1="2" x2="7" y2="2" stroke="#66D9EF" stroke-width="0.5"/>
+                    <line x1="1" y1="2.5" x2="5" y2="2.5" stroke="#A6E22E" stroke-width="0.5"/>
+                    <line x1="1" y1="3" x2="6" y2="3" stroke="#66D9EF" stroke-width="0.5"/>
+                </g>
+            </svg>`,
+            
+            128: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+                <defs>
+                    <linearGradient id="bgGradient128" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#2D2D2C"/>
+                        <stop offset="100%" style="stop-color:#464645"/>
+                    </linearGradient>
+                    <linearGradient id="extensionGradient128" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#66D9EF"/>
+                        <stop offset="100%" style="stop-color:#4FC3D7"/>
+                    </linearGradient>
+                    <linearGradient id="toggleGradient128" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#A6E22E"/>
+                        <stop offset="100%" style="stop-color:#8BC34A"/>
+                    </linearGradient>
+                </defs>
+                <rect x="12" y="12" width="104" height="104" rx="20" ry="20" fill="url(#bgGradient128)"/>
+                <g transform="translate(36, 32)">
+                    <path d="M0 8 L24 8 L24 4 L28 4 C32 4 36 8 36 12 C36 16 32 20 28 20 L24 20 L24 36 L28 36 C32 36 36 40 36 44 C36 48 32 52 28 52 L24 52 L24 56 L0 56 L0 8 Z" fill="url(#extensionGradient128)" stroke="#4FC3D7" stroke-width="2"/>
+                    <circle cx="18" cy="32" r="4" fill="#2D2D2C" stroke="#4FC3D7" stroke-width="1"/>
+                </g>
+                <g transform="translate(52, 48)">
+                    <path d="M0 0 L20 0 L20 4 L24 4 C28 4 32 8 32 12 C32 16 28 20 24 20 L20 20 L20 32 L0 32 L0 0 Z" fill="url(#extensionGradient128)" opacity="0.7" stroke="#4FC3D7" stroke-width="1"/>
+                </g>
+                <g transform="translate(32, 88)">
+                    <rect x="0" y="0" width="28" height="12" rx="6" fill="#464645" stroke="#66D9EF" stroke-width="1"/>
+                    <circle cx="22" cy="6" r="4" fill="url(#toggleGradient128)"/>
+                    <circle cx="22" cy="6" r="1.5" fill="#F8F8F2"/>
+                </g>
+                <g transform="translate(72, 88)">
+                    <rect x="0" y="2" width="20" height="8" rx="2" fill="none" stroke="#66D9EF" stroke-width="1.5"/>
+                    <line x1="4" y1="4" x2="16" y2="4" stroke="#66D9EF" stroke-width="1"/>
+                    <line x1="4" y1="6" x2="12" y2="6" stroke="#A6E22E" stroke-width="1"/>
+                    <line x1="4" y1="8" x2="14" y2="8" stroke="#66D9EF" stroke-width="1"/>
+                </g>
+            </svg>`
+        };
+
+        function createIconConverter(size) {
+            return `
+                <div class="icon-converter">
+                    <h3>${size}×${size} 像素</h3>
+                    <div class="icon-preview" id="preview${size}">
+                        <div class="size-label">${size}px</div>
+                        <div id="svg${size}"></div>
+                    </div>
+                    <button class="convert-btn" onclick="convertToPNG(${size})">
+                        轉換為 PNG
+                    </button>
+                    <div class="status" id="status${size}"></div>
+                    <div id="download${size}"></div>
+                </div>
+            `;
+        }
+
+        function convertToPNG(size) {
+            const statusEl = document.getElementById(`status${size}`);
+            const downloadEl = document.getElementById(`download${size}`);
+            
+            statusEl.innerHTML = '<span class="info">🔄 轉換中...</span>';
+            downloadEl.innerHTML = '';
+            
+            try {
+                const svgString = iconSVGs[size];
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                canvas.width = size;
+                canvas.height = size;
+                
+                // 創建 SVG blob
+                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+                
+                img.onload = function() {
+                    // 清除背景為透明
+                    ctx.clearRect(0, 0, size, size);
+                    
+                    // 繪製 SVG
+                    ctx.drawImage(img, 0, 0, size, size);
+                    
+                    // 轉換為 PNG blob
+                    canvas.toBlob(function(blob) {
+                        const pngUrl = URL.createObjectURL(blob);
+                        
+                        // 創建下載連結
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = pngUrl;
+                        downloadLink.download = `Chrome擴充功能管理器_icon-${size}.png`;
+                        downloadLink.className = 'download-btn';
+                        downloadLink.textContent = `📥 下載 ${size}px PNG`;
+                        
+                        // 更新狀態
+                        statusEl.innerHTML = '<span class="success">✅ 轉換完成</span>';
+                        downloadEl.innerHTML = '';
+                        downloadEl.appendChild(downloadLink);
+                        
+                        // 清理 URL
+                        URL.revokeObjectURL(url);
+                    }, 'image/png');
+                };
+                
+                img.onerror = function() {
+                    statusEl.innerHTML = '<span class="error">❌ 轉換失敗</span>';
+                    URL.revokeObjectURL(url);
+                };
+                
+                img.src = url;
+                
+            } catch (error) {
+                statusEl.innerHTML = '<span class="error">❌ 轉換錯誤</span>';
+                console.error('轉換錯誤:', error);
+            }
+        }
+
+        function convertAllToPNG() {
+            Object.keys(iconSVGs).forEach(size => {
+                setTimeout(() => convertToPNG(parseInt(size)), parseInt(size) * 10);
+            });
+        }
+
+        // 初始化頁面
+        document.addEventListener('DOMContentLoaded', function() {
+            const grid = document.getElementById('converterGrid');
+            
+            // 生成轉換器
+            Object.keys(iconSVGs).forEach(size => {
+                grid.innerHTML += createIconConverter(size);
+            });
+            
+            // 載入 SVG 預覽
+            Object.keys(iconSVGs).forEach(size => {
+                document.getElementById(`svg${size}`).innerHTML = iconSVGs[size];
+            });
+            
+            // 添加全部轉換按鈕
+            const allConvertBtn = document.createElement('div');
+            allConvertBtn.style.textAlign = 'center';
+            allConvertBtn.style.marginTop = '20px';
+            allConvertBtn.innerHTML = `
+                <button onclick="convertAllToPNG()" class="convert-btn" style="max-width: 300px; background: #f92672;">
+                    🚀 一次轉換全部圖標
+                </button>
+            `;
+            grid.parentNode.insertBefore(allConvertBtn, grid.nextSibling);
+        });
+    </script>
+</body>
+</html>
+
