@@ -23,8 +23,23 @@
         <div class="main-content">
             <!-- 左側邊欄 - 群組 -->
             <div class="sidebar">
+                <!-- 設備群組篩選 -->
+                <div style="margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin: 0;">設備分類</h3>
+                        <div style="display: flex; gap: 4px;">
+                            <button class="action-btn" data-action="addDeviceGroup" style="padding: 4px 8px; font-size: 11px;">+ 新增</button>
+                            <button class="action-btn" data-action="manageDeviceGroups" style="padding: 4px 8px; font-size: 11px;">⚙️ 管理</button>
+                        </div>
+                    </div>
+                    <ul class="device-group-list" id="deviceGroupList" style="list-style: none; padding: 0; margin: 0;">
+                        <!-- 動態生成設備群組列表 -->
+                    </ul>
+                </div>
+
+                <!-- 功能群組分類 -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <h3>群組分類</h3>
+                    <h3>功能分類</h3>
                     <button class="action-btn" data-action="addNewGroup" title="新增群組" style="padding: 4px 8px; font-size: 12px;">+ 新增</button>
                 </div>
                 <ul class="group-list" id="groupList">
@@ -69,6 +84,29 @@
                         <span class="count" id="countOther">0</span>
                     </li>
                 </ul>
+
+                <!-- 保留記錄區 -->
+                <div style="margin-top: 24px; padding-top: 20px; border-top: 2px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="font-size: 14px; color: var(--warning-color); margin: 0;">🗑️ 保留記錄</h3>
+                        <span id="archiveCount" style="font-size: 12px; color: var(--text-secondary);">0</span>
+                    </div>
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;">
+                        <div class="archive-item" data-action="showDeletedExtensions" style="cursor: pointer; padding: 10px; border-radius: 4px; transition: all 0.2s; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 13px; color: var(--text-primary);">📦 已刪除</span>
+                                <span id="countDeleted" class="count" style="font-size: 12px;">0</span>
+                            </div>
+                        </div>
+                        <div class="archive-item" data-action="showUnavailableExtensions" style="cursor: pointer; padding: 10px; border-radius: 4px; transition: all 0.2s;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 13px; color: var(--text-primary);">⚠️ 不可用</span>
+                                <span id="countUnavailable" class="count" style="font-size: 12px;">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="action-btn danger" data-action="cleanupArchive" style="width: 100%; margin-top: 12px; padding: 8px; font-size: 12px;">清理記錄</button>
+                </div>
             </div>
 
             <!-- 中間內容區 -->

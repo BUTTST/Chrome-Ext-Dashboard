@@ -707,3 +707,80 @@ body {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* 保留記錄區樣式 */
+.archive-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.archive-item .count {
+    background: var(--bg-tertiary);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    min-width: 24px;
+    text-align: center;
+}
+
+/* 已刪除擴充功能的特殊樣式 */
+.extension-card.deleted {
+    opacity: 0.7;
+    border-color: var(--warning-color);
+    background: repeating-linear-gradient(
+        45deg,
+        var(--card-bg),
+        var(--card-bg) 10px,
+        rgba(249, 38, 114, 0.05) 10px,
+        rgba(249, 38, 114, 0.05) 20px
+    );
+}
+
+.extension-card.deleted .extension-name {
+    color: var(--warning-color);
+}
+
+/* 雙重群組標籤 */
+.group-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.group-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.group-badge.functional {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.group-badge.device {
+    border-color: var(--success-color);
+    color: var(--success-color);
+}
+
+/* 設備群組列表樣式 */
+.device-group-item:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(102, 217, 239, 0.2);
+}
+
+.device-group-item.active {
+    background: var(--accent-color);
+    color: var(--bg-primary);
+    border-color: var(--accent-color);
+}
+
+.device-group-item.active .count {
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--bg-primary);
+}
