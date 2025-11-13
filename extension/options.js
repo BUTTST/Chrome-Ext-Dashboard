@@ -37,6 +37,10 @@ let currentFilters = {
   viewMode: 'active' // 'active' | 'deleted'
 };
 
+// 排序狀態（只有在用戶點擊排序按鈕時才為 true）
+let userRequestedSort = false;
+let currentSortMode = null; // 'status' | 'name' | null
+
 // 群組數據
 let groupNames = {
   'all': '所有擴充功能',
@@ -298,6 +302,93 @@ function updateStatistics() {
   if (disabledEl) disabledEl.textContent = disabled;
 }
 
+/**
+ * 更新右側面板的最近變更
+ */
+async function updateRecentChanges() {
+  const recentChangesEl = document.getElementById('recentChanges');
+  if (!recentChangesEl) return;
+  
+  const result = await chrome.storage.local.get([STORAGE_KEYS.changeHistory]);
+  const history = result.changeHistory || [];
+  
+  if (history.length === 0) {
+    recentChangesEl.innerHTML = `
+      <div style="font-size: 13px; color: var(--text-secondary);">
+        暫無變更記錄
+      </div>
+    `;
+    return;
+  }
+  
+  // 只顯示最近5筆記錄
+  const recentItems = history.slice(0, 5);
+  
+  recentChangesEl.innerHTML = recentItems.map(item => `
+    <div style="border-bottom: 1px solid var(--border-color); padding: 8px 0; font-size: 12px;">
+      <div style="color: var(--text-primary); margin-bottom: 4px;">${item.action}</div>
+      <div style="color: var(--text-secondary); font-size: 11px;">${getTimeAgo(item.timestamp)}</div>
+    </div>
+  `).join('');
+}
+
+/**
+ * 更新右側面板的快照列表
+ */
+async function updateSnapshotsList() {
+  const snapshotListEl = document.getElementById('snapshotList');
+  if (!snapshotListEl) return;
+  
+  const result = await chrome.storage.local.get([STORAGE_KEYS.snapshots]);
+  const snapshots = result.snapshots || [];
+  
+  if (snapshots.length === 0) {
+    snapshotListEl.innerHTML = `
+      <div style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 16px; border-radius: 6px; text-align: center; color: var(--text-secondary); font-size: 12px;">
+        暫無快照記錄<br>
+        <small style="display: block; margin-top: 8px;">點擊上方「📸 建立快照」按鈕來建立第一個快照</small>
+      </div>
+    `;
+    return;
+  }
+  
+  // 只顯示最近3個快照
+  const recentSnapshots = snapshots.slice(0, 3);
+  
+  snapshotListEl.innerHTML = `
+    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;">
+      ${recentSnapshots.map((snapshot, index) => `
+        <div style="padding: 12px; ${index < recentSnapshots.length - 1 ? 'border-bottom: 1px solid var(--border-color);' : ''}">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-size: 12px; color: var(--text-primary); font-weight: 600;">
+              快照 #${snapshots.length - index}
+            </div>
+            <div style="font-size: 11px; color: var(--text-secondary);">
+              ${getTimeAgo(snapshot.timestamp)}
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
+            ${snapshot.count} 個擴充功能 • ${snapshot.type === 'manual' ? '手動' : '自動'}
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <button class="action-btn" data-action="restoreSnapshot" data-snapshot-id="${snapshot.id || snapshot.timestamp}" style="flex: 1; padding: 4px 8px; font-size: 10px;">
+              🔄 恢復
+            </button>
+            <button class="action-btn danger" data-action="deleteSnapshot" data-snapshot-id="${snapshot.id || snapshot.timestamp}" style="flex: 1; padding: 4px 8px; font-size: 10px;">
+              🗑️ 刪除
+            </button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    ${snapshots.length > 3 ? `
+      <button class="action-btn" data-action="viewAllSnapshots" style="width: 100%; margin-top: 8px; padding: 6px; font-size: 11px;">
+        查看全部 ${snapshots.length} 個快照
+      </button>
+    ` : ''}
+  `;
+}
+
 // ==================== 設備群組管理 ====================
 
 /**
@@ -343,11 +434,17 @@ function renderDeviceGroupList() {
       const count = allExtensions.filter(ext => 
         id === 'all_devices' ? true : ext.deviceGroup === id
       ).length;
+      const canEdit = id.startsWith('device_'); // 只允許編輯自定義設備群組
       
       return `
-        <li class="device-group-item ${isActive}" data-device-group="${id}" style="padding: 14px 16px; margin-bottom: 6px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--text-primary);">
-          <span>${name}</span>
+        <li class="device-group-item ${isActive}" data-device-group="${id}" style="padding: 14px 16px; margin-bottom: 6px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--text-primary); position: relative;">
+          <span style="flex: 1;" ${canEdit ? `ondblclick="editDeviceGroupName('${id}')" title="雙擊編輯"` : ''}>${name}</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
           <span class="count" style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 12px; font-size: 12px; color: var(--text-secondary); min-width: 24px; text-align: center;">${count}</span>
+            ${canEdit ? `
+              <button onclick="editDeviceGroupName('${id}'); event.stopPropagation();" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 4px; font-size: 14px;" title="編輯名稱">✏️</button>
+            ` : ''}
+          </div>
         </li>
       `;
     }).join('');
@@ -375,6 +472,35 @@ async function addDeviceGroup() {
   await logChange(`新增設備群組：${displayName}`);
   
   alert(`已成功新增設備群組「${displayName}」`);
+}
+
+/**
+ * 編輯設備群組名稱
+ */
+async function editDeviceGroupName(groupId) {
+  if (!groupId.startsWith('device_')) {
+    alert('只能編輯自定義設備群組');
+    return;
+  }
+  
+  const currentName = deviceGroupNames[groupId];
+  const newName = prompt('編輯設備群組名稱：', currentName);
+  
+  if (!newName || newName.trim() === '' || newName === currentName) {
+    return;
+  }
+  
+  const oldName = currentName;
+  deviceGroupNames[groupId] = newName.trim();
+  
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.deviceGroupNames]: deviceGroupNames
+  });
+  
+  renderDeviceGroupList();
+  await logChange(`編輯設備群組：${oldName} → ${newName.trim()}`);
+  
+  alert(`已成功更新設備群組名稱為「${newName.trim()}」`);
 }
 
 /**
@@ -1032,6 +1158,10 @@ async function initManagerView() {
     await renderExtensions();
     initSearch();
     initActionHandlers();
+    
+    // 更新右側面板
+    await updateRecentChanges();
+    await updateSnapshotsList();
   } catch (error) {
     console.error('Failed to initialize manager view:', error);
   }
@@ -1078,6 +1208,22 @@ async function renderExtensions(filter = '') {
       (ext.customDesc && ext.customDesc.toLowerCase().includes(filter.toLowerCase()))
     );
   }
+  
+  // 只有在用戶請求排序時才應用排序
+  if (userRequestedSort && currentSortMode) {
+    if (currentSortMode === 'status') {
+      displayExtensions = [...displayExtensions].sort((a, b) => {
+        if (a.enabled === b.enabled) {
+          return a.name.localeCompare(b.name, 'zh-TW');
+        }
+        return b.enabled - a.enabled;
+      });
+    } else if (currentSortMode === 'name') {
+      displayExtensions = [...displayExtensions].sort((a, b) => 
+        a.name.localeCompare(b.name, 'zh-TW')
+      );
+    }
+  }
 
   if (displayExtensions.length === 0) {
     container.innerHTML = `
@@ -1107,7 +1253,7 @@ async function renderExtensions(filter = '') {
                  class="ext-icon-img"
                  onerror="showFallbackIcon('${ext.id}')"
                  onload="hideFallbackIcon('${ext.id}')"
-                 style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;">
+                 style="width: 80%; height: 80%; object-fit: contain; border-radius: 8px;">
             <div class="fallback-icon" id="fallback-${ext.id}" style="display:none; width:100%; height:100%; align-items:center; justify-content:center; background: linear-gradient(135deg, var(--accent-color), var(--success-color)); border-radius: 8px; color: var(--bg-primary); font-size: 20px; position: absolute; top: 0; left: 0;">
               🔠
             </div>
@@ -1469,6 +1615,7 @@ async function toggleExtension(id) {
     updateStatistics();
     
     await logChange(`${ext.enabled ? '啟用' : '停用'} ${ext.name}`);
+    await updateRecentChanges();
   } catch (error) {
     console.error('Failed to toggle extension:', error);
     alert(`無法切換擴充功能狀態：${error.message}`);
@@ -1662,6 +1809,9 @@ function initSearch() {
  * 按狀態排序
  */
 async function sortByStatus() {
+  userRequestedSort = true;
+  currentSortMode = 'status';
+  
   filteredExtensions = [...filteredExtensions].sort((a, b) => {
     if (a.enabled === b.enabled) {
       return a.name.localeCompare(b.name, 'zh-TW');
@@ -1677,6 +1827,9 @@ async function sortByStatus() {
  * 按名稱排序
  */
 async function sortByName() {
+  userRequestedSort = true;
+  currentSortMode = 'name';
+  
   filteredExtensions = [...filteredExtensions].sort((a, b) => 
     a.name.localeCompare(b.name, 'zh-TW')
   );
@@ -1710,6 +1863,9 @@ function initDragAndDrop() {
       document.querySelectorAll('.group-item').forEach(item => {
         item.classList.remove('drag-over');
       });
+      document.querySelectorAll('.device-group-item').forEach(item => {
+        item.classList.remove('drag-over');
+      });
       draggedElement = null;
       draggedExtensionId = null;
     }
@@ -1719,11 +1875,24 @@ function initDragAndDrop() {
     e.preventDefault();
     
     const groupItem = e.target.closest('.group-item');
+    const deviceGroupItem = e.target.closest('.device-group-item');
+    
     if (groupItem && draggedExtensionId) {
       document.querySelectorAll('.group-item').forEach(item => {
         item.classList.remove('drag-over');
       });
+      document.querySelectorAll('.device-group-item').forEach(item => {
+        item.classList.remove('drag-over');
+      });
       groupItem.classList.add('drag-over');
+    } else if (deviceGroupItem && draggedExtensionId) {
+      document.querySelectorAll('.group-item').forEach(item => {
+        item.classList.remove('drag-over');
+      });
+      document.querySelectorAll('.device-group-item').forEach(item => {
+        item.classList.remove('drag-over');
+      });
+      deviceGroupItem.classList.add('drag-over');
     }
   });
   
@@ -1731,6 +1900,8 @@ function initDragAndDrop() {
     e.preventDefault();
     
     const groupItem = e.target.closest('.group-item');
+    const deviceGroupItem = e.target.closest('.device-group-item');
+    
     if (groupItem && draggedExtensionId) {
       const targetGroupId = groupItem.dataset.group;
       
@@ -1740,6 +1911,16 @@ function initDragAndDrop() {
       
       if (targetGroupId !== 'all') {
         await moveExtensionToGroup(draggedExtensionId, targetGroupId);
+      }
+    } else if (deviceGroupItem && draggedExtensionId) {
+      const targetDeviceGroupId = deviceGroupItem.dataset.deviceGroup;
+      
+      document.querySelectorAll('.device-group-item').forEach(item => {
+        item.classList.remove('drag-over');
+      });
+      
+      if (targetDeviceGroupId !== 'all_devices') {
+        await moveExtensionToDeviceGroup(draggedExtensionId, targetDeviceGroupId);
       }
     }
   });
@@ -1774,6 +1955,38 @@ async function moveExtensionToGroup(extensionId, targetGroupId) {
   updateGroupCounts();
   await renderExtensions();
   await logChange(`移動 ${ext.name}：${oldGroupName} → ${newGroupName}`);
+}
+
+/**
+ * 移動擴充功能到設備群組
+ */
+async function moveExtensionToDeviceGroup(extensionId, targetDeviceGroupId) {
+  const ext = allExtensions.find(e => e.id === extensionId);
+  if (!ext) return;
+  
+  const oldDeviceGroup = ext.deviceGroup;
+  const oldDeviceGroupName = deviceGroupNames[oldDeviceGroup] || '未知設備';
+  const newDeviceGroupName = deviceGroupNames[targetDeviceGroupId] || '未知設備';
+  
+  ext.deviceGroup = targetDeviceGroupId;
+  extensionDeviceGroups[extensionId] = targetDeviceGroupId;
+  
+  await chrome.storage.local.set({ 
+    [STORAGE_KEYS.extensionDeviceGroups]: extensionDeviceGroups 
+  });
+  
+  // 記錄設備群組變更
+  chrome.runtime.sendMessage({
+    type: 'UPDATE_GROUP',
+    extensionId: extensionId,
+    functionalGroup: ext.group,
+    deviceGroup: targetDeviceGroupId
+  });
+  
+  renderDeviceGroupList();
+  updateGroupCounts();
+  await renderExtensions();
+  await logChange(`移動 ${ext.name}：${oldDeviceGroupName} → ${newDeviceGroupName}`);
 }
 
 // ==================== 群組管理 ====================
@@ -1927,10 +2140,159 @@ async function createSnapshot() {
     await chrome.storage.local.set({ [STORAGE_KEYS.snapshots]: snapshots });
     await logChange(`建立快照 - ${snapshot.count}個擴充功能`);
     
+    // 更新快照列表
+    await updateSnapshotsList();
+    
     alert(`快照建立成功！\n時間：${snapshot.date}\n已記錄 ${snapshot.count} 個啟用的擴充功能`);
   } catch (error) {
     console.error('Failed to create snapshot:', error);
     alert('建立快照失敗');
+  }
+}
+
+/**
+ * 恢復快照
+ */
+async function restoreSnapshot(snapshotId) {
+  try {
+    const result = await chrome.storage.local.get([STORAGE_KEYS.snapshots]);
+    const snapshots = result.snapshots || [];
+    const snapshot = snapshots.find(s => (s.id || s.timestamp) == snapshotId);
+    
+    if (!snapshot) {
+      alert('找不到該快照');
+      return;
+    }
+    
+    const confirmed = confirm(
+      `確定要恢復此快照嗎？\n` +
+      `時間：${snapshot.date}\n` +
+      `擴充功能數量：${snapshot.count}\n\n` +
+      `這將會根據快照狀態啟用/停用擴充功能。`
+    );
+    
+    if (!confirmed) return;
+    
+    // 獲取快照中的擴充功能ID列表
+    const snapshotExtIds = new Set(snapshot.extensions.map(e => e.id));
+    
+    // 停用所有不在快照中的已啟用擴充功能
+    for (const ext of allExtensions) {
+      const shouldBeEnabled = snapshotExtIds.has(ext.id);
+      
+      if (ext.enabled !== shouldBeEnabled) {
+        try {
+          await chrome.management.setEnabled(ext.id, shouldBeEnabled);
+          ext.enabled = shouldBeEnabled;
+        } catch (error) {
+          console.error(`Failed to ${shouldBeEnabled ? 'enable' : 'disable'} ${ext.name}:`, error);
+        }
+      }
+    }
+    
+    await loadExtensions();
+    await renderExtensions();
+    updateStatistics();
+    await updateRecentChanges();
+    await logChange(`恢復快照 - ${snapshot.date}`);
+    
+    alert(`快照恢復成功！\n已恢復到 ${snapshot.date} 的狀態`);
+  } catch (error) {
+    console.error('Failed to restore snapshot:', error);
+    alert('恢復快照失敗');
+  }
+}
+
+/**
+ * 刪除快照
+ */
+async function deleteSnapshot(snapshotId) {
+  try {
+    const confirmed = confirm('確定要刪除此快照嗎？此操作無法復原。');
+    if (!confirmed) return;
+    
+    const result = await chrome.storage.local.get([STORAGE_KEYS.snapshots]);
+    const snapshots = result.snapshots || [];
+    const filteredSnapshots = snapshots.filter(s => (s.id || s.timestamp) != snapshotId);
+    
+    await chrome.storage.local.set({ [STORAGE_KEYS.snapshots]: filteredSnapshots });
+    await updateSnapshotsList();
+    await logChange('刪除快照');
+    
+    alert('快照已刪除');
+  } catch (error) {
+    console.error('Failed to delete snapshot:', error);
+    alert('刪除快照失敗');
+  }
+}
+
+/**
+ * 查看所有快照
+ */
+async function viewAllSnapshots() {
+  try {
+    const result = await chrome.storage.local.get([STORAGE_KEYS.snapshots]);
+    const snapshots = result.snapshots || [];
+    
+    if (snapshots.length === 0) {
+      alert('暫無快照記錄');
+      return;
+    }
+    
+    // 創建詳細的快照列表視圖
+    const snapshotListHTML = `
+      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center;" id="snapshotModal">
+        <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; width: 90%; max-width: 800px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+          <div style="padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; color: var(--text-primary);">📸 所有快照記錄</h2>
+            <button onclick="document.getElementById('snapshotModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">×</button>
+          </div>
+          <div style="flex: 1; overflow-y: auto; padding: 20px;">
+            ${snapshots.map((snapshot, index) => `
+              <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 16px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                  <div>
+                    <div style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">
+                      快照 #${snapshots.length - index}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">
+                      ${snapshot.date}
+                    </div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 14px; color: var(--accent-color); font-weight: 600;">
+                      ${snapshot.count} 個擴充功能
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary);">
+                      ${snapshot.type === 'manual' ? '手動建立' : '自動建立'}
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button class="action-btn" data-action="restoreSnapshot" data-snapshot-id="${snapshot.id || snapshot.timestamp}" style="flex: 1; padding: 8px;">
+                    🔄 恢復此快照
+                  </button>
+                  <button class="action-btn danger" data-action="deleteSnapshot" data-snapshot-id="${snapshot.id || snapshot.timestamp}" style="flex: 1; padding: 8px;">
+                    🗑️ 刪除
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // 添加到頁面
+    const modalDiv = document.createElement('div');
+    modalDiv.innerHTML = snapshotListHTML;
+    document.body.appendChild(modalDiv.firstElementChild);
+    
+    // 初始化按鈕事件
+    initActionHandlers();
+  } catch (error) {
+    console.error('Failed to view snapshots:', error);
+    alert('無法顯示快照列表');
   }
 }
 
@@ -2711,6 +3073,12 @@ function initActionHandlers() {
           break;
         case 'restoreSnapshot':
           if (snapshotId) await restoreSnapshot(snapshotId);
+          break;
+        case 'deleteSnapshot':
+          if (snapshotId) await deleteSnapshot(snapshotId);
+          break;
+        case 'viewAllSnapshots':
+          await viewAllSnapshots();
           break;
         
         // 群組管理
