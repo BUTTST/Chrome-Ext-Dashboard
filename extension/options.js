@@ -504,6 +504,110 @@ async function editDeviceGroupName(groupId) {
 }
 
 /**
+ * 顯示群組選擇器（彈出菜單）
+ */
+function showGroupSelector(extensionId, type, event) {
+  event.stopPropagation();
+  
+  // 移除任何現有的選擇器
+  const existingSelector = document.querySelector('.group-selector-popup');
+  if (existingSelector) {
+    existingSelector.remove();
+  }
+  
+  const ext = allExtensions.find(e => e.id === extensionId);
+  if (!ext) return;
+  
+  // 創建彈出選擇器
+  const selector = document.createElement('div');
+  selector.className = 'group-selector-popup';
+  selector.style.cssText = `
+    position: fixed;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    min-width: 150px;
+    max-height: 300px;
+    overflow-y: auto;
+  `;
+  
+  // 根據類型構建選項列表
+  let options = [];
+  let currentValue = '';
+  
+  if (type === 'functional') {
+    options = Object.entries(groupNames).map(([id, name]) => ({ id, name }));
+    currentValue = ext.group;
+  } else if (type === 'device') {
+    options = Object.entries(deviceGroupNames).map(([id, name]) => ({ id, name }));
+    currentValue = ext.deviceGroup;
+  }
+  
+  // 創建選項列表
+  const optionsHTML = options.map(option => `
+    <div class="group-option" 
+         data-group-id="${option.id}"
+         style="padding: 8px 12px; cursor: pointer; border-radius: 4px; transition: background 0.2s; ${option.id === currentValue ? 'background: var(--accent-color); color: white; font-weight: 600;' : ''}">
+      ${option.name}
+    </div>
+  `).join('');
+  
+  selector.innerHTML = `
+    <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; padding: 0 4px;">
+      ${type === 'functional' ? '選擇功能分類' : '選擇設備分類'}
+    </div>
+    ${optionsHTML}
+  `;
+  
+  // 設置位置（在點擊位置附近）
+  const rect = event.target.getBoundingClientRect();
+  selector.style.left = `${rect.left}px`;
+  selector.style.top = `${rect.bottom + 5}px`;
+  
+  document.body.appendChild(selector);
+  
+  // 添加點擊事件處理
+  selector.querySelectorAll('.group-option').forEach(option => {
+    option.addEventListener('mouseenter', function() {
+      if (this.dataset.groupId !== currentValue) {
+        this.style.background = 'var(--bg-tertiary)';
+      }
+    });
+    
+    option.addEventListener('mouseleave', function() {
+      if (this.dataset.groupId !== currentValue) {
+        this.style.background = '';
+      }
+    });
+    
+    option.addEventListener('click', async function() {
+      const newGroupId = this.dataset.groupId;
+      
+      if (type === 'functional') {
+        await moveExtensionToGroup(extensionId, newGroupId);
+      } else if (type === 'device') {
+        await moveExtensionToDeviceGroup(extensionId, newGroupId);
+      }
+      
+      selector.remove();
+    });
+  });
+  
+  // 點擊外部關閉選擇器
+  setTimeout(() => {
+    document.addEventListener('click', function closeSelector(e) {
+      if (!selector.contains(e.target)) {
+        selector.remove();
+        document.removeEventListener('click', closeSelector);
+      }
+    });
+  }, 0);
+}
+
+/**
  * 刪除設備群組
  */
 async function deleteDeviceGroup(groupId) {
@@ -1092,25 +1196,55 @@ function getSettingsView() {
         
         <!-- 資料管理 -->
         <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px;">
-          <h3 style="margin-bottom: 16px; color: var(--text-primary);">資料管理</h3>
+          <h3 style="margin-bottom: 16px; color: var(--text-primary);">📦 資料管理</h3>
           
-          <div style="margin-bottom: 16px;">
-            <button class="action-btn primary" data-action="showImportDialog">📥 完整導入功能</button>
-            <small style="display: block; color: var(--text-secondary); margin-top: 4px;">
-              使用完整導入對話框，支援多種模式和群組選擇
+          <div style="background: var(--bg-tertiary); padding: 16px; border-radius: 6px; margin-bottom: 16px;">
+            <h4 style="font-size: 14px; color: var(--text-primary); margin-bottom: 12px;">導入資料</h4>
+            <button class="action-btn primary" data-action="importData" style="width: 100%; margin-bottom: 8px;">
+              📥 導入配置
+            </button>
+            <small style="display: block; color: var(--text-secondary); font-size: 11px; line-height: 1.5;">
+              • 支援完整配置（群組、設定、快照、歷史記錄）<br>
+              • 支援選擇性導入（僅群組配置或僅設定）<br>
+              • 自動合併或覆蓋現有配置
             </small>
           </div>
           
-          <div style="margin-bottom: 16px;">
-            <button class="action-btn primary" data-action="showExportDialog">📤 完整導出功能</button>
-            <small style="display: block; color: var(--text-secondary); margin-top: 4px;">
-              選擇特定設備群組或功能類別進行導出
+          <div style="background: var(--bg-tertiary); padding: 16px; border-radius: 6px; margin-bottom: 16px;">
+            <h4 style="font-size: 14px; color: var(--text-primary); margin-bottom: 12px;">導出資料</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+              <button class="action-btn" data-action="exportData" data-export-type="all">
+                📤 完整導出
+              </button>
+              <button class="action-btn" data-action="exportData" data-export-type="groups">
+                📋 群組配置
+              </button>
+              <button class="action-btn" data-action="exportData" data-export-type="snapshots">
+                📸 快照記錄
+              </button>
+              <button class="action-btn" data-action="exportData" data-export-type="settings">
+                ⚙️ 僅設定
+              </button>
+            </div>
+            <small style="display: block; color: var(--text-secondary); font-size: 11px; line-height: 1.5;">
+              • 完整導出：所有配置、群組、快照、歷史<br>
+              • 選擇性導出：根據需求導出特定資料<br>
+              • JSON 格式，可在其他設備導入
             </small>
           </div>
           
-          <div style="display: flex; gap: 12px;">
-            <button class="action-btn" data-action="exportData">快速匯出</button>
-            <button class="action-btn" data-action="importData">快速匯入</button>
+          <div style="background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.3); padding: 12px; border-radius: 6px;">
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <button class="action-btn danger" data-action="resetAllData" style="flex: 1;">
+                🗑️ 重置所有資料
+              </button>
+              <button class="action-btn" data-action="backupBeforeReset" style="flex: 1;">
+                💾 備份後重置
+              </button>
+            </div>
+            <small style="display: block; color: var(--warning-color); font-size: 11px;">
+              ⚠️ 危險操作：重置將清除所有自定義配置
+            </small>
           </div>
         </div>
         
@@ -1266,12 +1400,12 @@ async function renderExtensions(filter = '') {
         
         <!-- 雙重群組標籤 -->
         <div class="group-tags" style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
-          <span class="tag functional" style="display: inline-block; padding: 3px 8px; background: linear-gradient(135deg, var(--accent-color), var(--success-color)); color: white; border-radius: 12px; font-size: 11px; font-weight: 500;" 
-                title="功能分類" onclick="filterByGroup('${ext.group}')">
+          <span class="tag functional" style="display: inline-block; padding: 3px 8px; background: linear-gradient(135deg, var(--accent-color), var(--success-color)); color: white; border-radius: 12px; font-size: 11px; font-weight: 500; cursor: pointer;" 
+                title="點擊編輯功能分類" onclick="showGroupSelector('${ext.id}', 'functional', event)">
             ${groupNames[ext.group] || ext.group}
           </span>
-          <span class="tag device" style="display: inline-block; padding: 3px 8px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 12px; font-size: 11px;" 
-                title="設備分類" onclick="filterByDevice('${ext.deviceGroup}')">
+          <span class="tag device" style="display: inline-block; padding: 3px 8px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 12px; font-size: 11px; cursor: pointer;" 
+                title="點擊編輯設備分類" onclick="showGroupSelector('${ext.id}', 'device', event)">
             ${deviceGroupNames[ext.deviceGroup] || ext.deviceGroup}
           </span>
         </div>
@@ -1812,13 +1946,6 @@ async function sortByStatus() {
   userRequestedSort = true;
   currentSortMode = 'status';
   
-  filteredExtensions = [...filteredExtensions].sort((a, b) => {
-    if (a.enabled === b.enabled) {
-      return a.name.localeCompare(b.name, 'zh-TW');
-    }
-    return b.enabled - a.enabled;
-  });
-  
   await renderExtensions();
   await logChange('執行狀態排序');
 }
@@ -1829,10 +1956,6 @@ async function sortByStatus() {
 async function sortByName() {
   userRequestedSort = true;
   currentSortMode = 'name';
-  
-  filteredExtensions = [...filteredExtensions].sort((a, b) => 
-    a.name.localeCompare(b.name, 'zh-TW')
-  );
   
   await renderExtensions();
   await logChange('執行名稱排序');
@@ -1968,8 +2091,14 @@ async function moveExtensionToDeviceGroup(extensionId, targetDeviceGroupId) {
   const oldDeviceGroupName = deviceGroupNames[oldDeviceGroup] || '未知設備';
   const newDeviceGroupName = deviceGroupNames[targetDeviceGroupId] || '未知設備';
   
-  ext.deviceGroup = targetDeviceGroupId;
-  extensionDeviceGroups[extensionId] = targetDeviceGroupId;
+  // 如果是移動到"所有設備"，則從 extensionDeviceGroups 中刪除該條目
+  if (targetDeviceGroupId === 'all_devices') {
+    ext.deviceGroup = 'all_devices';
+    delete extensionDeviceGroups[extensionId];
+  } else {
+    ext.deviceGroup = targetDeviceGroupId;
+    extensionDeviceGroups[extensionId] = targetDeviceGroupId;
+  }
   
   await chrome.storage.local.set({ 
     [STORAGE_KEYS.extensionDeviceGroups]: extensionDeviceGroups 
@@ -2859,35 +2988,91 @@ window.openAddGroupDialog = function(type) {
 /**
  * 匯出設定（v2.0格式，包含元數據）
  */
-async function exportData() {
+async function exportData(event) {
   try {
+    const exportType = event?.target?.dataset?.exportType || 'all';
     const data = await chrome.storage.local.get();
-    const exportData = {
-      version: '2.0',
+    
+    let exportData = {
+      version: '2.1',
+      exportDate: new Date().toISOString(),
+      exportType: exportType
+    };
+    
+    // 根據導出類型選擇要包含的資料
+    switch (exportType) {
+      case 'all':
+        // 完整導出：包含所有資料
+        exportData = {
+          ...exportData,
       extensionGroups: data.extensionGroups || {},
       extensionDeviceGroups: data.extensionDeviceGroups || {},
       extensionDescriptions: data.extensionDescriptions || {},
       extensionMetadata: data.extensionMetadata || {},
       deviceGroupNames: data.deviceGroupNames || {},
       customGroupNames: data.customGroupNames || {},
+          groupNames: data.groupNames || {},
+          snapshots: data.snapshots || [],
+          changeHistory: data.changeHistory || [],
+          theme: data.theme || 'dark',
+          autoSnapshot: data.autoSnapshot !== false
+        };
+        break;
+        
+      case 'groups':
+        // 僅群組配置
+        exportData = {
+          ...exportData,
+          extensionGroups: data.extensionGroups || {},
+          extensionDeviceGroups: data.extensionDeviceGroups || {},
+          deviceGroupNames: data.deviceGroupNames || {},
+          customGroupNames: data.customGroupNames || {},
+          groupNames: data.groupNames || {}
+        };
+        break;
+        
+      case 'snapshots':
+        // 僅快照記錄
+        exportData = {
+          ...exportData,
+          snapshots: data.snapshots || [],
+          changeHistory: data.changeHistory || []
+        };
+        break;
+        
+      case 'settings':
+        // 僅設定
+        exportData = {
+          ...exportData,
       theme: data.theme || 'dark',
       autoSnapshot: data.autoSnapshot !== false,
-      exportDate: new Date().toISOString()
+          extensionDescriptions: data.extensionDescriptions || {},
+          extensionMetadata: data.extensionMetadata || {}
     };
+        break;
+    }
     
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     
+    const typeNames = {
+      'all': '完整',
+      'groups': '群組',
+      'snapshots': '快照',
+      'settings': '設定'
+    };
+    
     const a = document.createElement('a');
     a.href = url;
-    a.download = `extension-manager-settings-v2-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `extension-manager-${typeNames[exportType]}-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     
     URL.revokeObjectURL(url);
-    await logChange('匯出設定資料（v2.0）');
+    await logChange(`導出資料：${typeNames[exportType]}（v2.1）`);
+    alert(`✅ 成功導出${typeNames[exportType]}資料`);
   } catch (error) {
     console.error('Export failed:', error);
-    alert('匯出失敗');
+    alert('❌ 導出失敗：' + error.message);
   }
 }
 
@@ -2905,45 +3090,219 @@ async function importData() {
     
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
+      const importedData = JSON.parse(text);
       
-      if (!confirm('確定要匯入設定嗎？這將覆蓋當前的設定。')) {
-        return;
-      }
+      // 顯示導入對話框
+      const importType = importedData.exportType || 'all';
+      const version = importedData.version || '1.0';
       
-      // 檢測版本
-      const version = data.version || '1.0';
+      const typeNames = {
+        'all': '完整配置',
+        'groups': '群組配置',
+        'snapshots': '快照記錄',
+        'settings': '設定'
+      };
       
-      if (version === '2.0') {
-        // v2.0 格式，直接匯入
-        await chrome.storage.local.set(data);
+      // 創建導入選項對話框
+      const dialog = document.createElement('div');
+      dialog.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--card-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        z-index: 10001;
+        min-width: 400px;
+        max-width: 500px;
+      `;
+      
+      dialog.innerHTML = `
+        <h3 style="margin: 0 0 16px 0; color: var(--text-primary);">📥 導入資料</h3>
+        
+        <div style="background: var(--bg-tertiary); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+            <strong>檔案資訊：</strong>
+          </div>
+          <div style="font-size: 12px; color: var(--text-primary);">
+            • 類型：${typeNames[importType] || '未知'}<br>
+            • 版本：v${version}<br>
+            • 導出時間：${new Date(importedData.exportDate).toLocaleString('zh-TW')}<br>
+            • 檔案名：${file.name}
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px; color: var(--text-primary); font-weight: 600;">
+            導入模式：
+          </label>
+          <select id="importMode" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--card-bg); color: var(--text-primary);">
+            <option value="merge">🔄 合併模式（保留現有資料，新增/更新匯入資料）</option>
+            <option value="replace">⚠️ 覆蓋模式（完全替換為匯入資料）</option>
+          </select>
+        </div>
+        
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button id="cancelImport" class="action-btn" style="padding: 8px 16px;">
+            取消
+          </button>
+          <button id="confirmImport" class="action-btn primary" style="padding: 8px 16px;">
+            確認導入
+          </button>
+        </div>
+      `;
+      
+      // 創建遮罩
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        z-index: 10000;
+      `;
+      
+      document.body.appendChild(overlay);
+      document.body.appendChild(dialog);
+      
+      // 綁定事件
+      document.getElementById('cancelImport').onclick = () => {
+        overlay.remove();
+        dialog.remove();
+      };
+      
+      document.getElementById('confirmImport').onclick = async () => {
+        const mode = document.getElementById('importMode').value;
+        
+        try {
+          const currentData = await chrome.storage.local.get();
+          let finalData = {};
+          
+          if (mode === 'merge') {
+            // 合併模式：保留現有資料，合併新資料
+            finalData = { ...currentData };
+            
+            // 合併各個字段
+            Object.keys(importedData).forEach(key => {
+              if (key === 'version' || key === 'exportDate' || key === 'exportType') {
+                return; // 跳過元數據
+              }
+              
+              if (typeof importedData[key] === 'object' && !Array.isArray(importedData[key])) {
+                // 對象類型：合併
+                finalData[key] = { ...(currentData[key] || {}), ...importedData[key] };
+              } else if (Array.isArray(importedData[key])) {
+                // 陣列類型：合併並去重（基於時間戳）
+                const current = currentData[key] || [];
+                const imported = importedData[key];
+                const combined = [...current, ...imported];
+                
+                // 去重（針對快照和歷史記錄）
+                const seen = new Set();
+                finalData[key] = combined.filter(item => {
+                  const id = item.timestamp || item.id || JSON.stringify(item);
+                  if (seen.has(id)) return false;
+                  seen.add(id);
+                  return true;
+                });
       } else {
-        // v1.0 格式，轉換後匯入
-        const converted = {
-          extensionGroups: data.extensionGroups || {},
-          extensionDescriptions: data.extensionDescriptions || {},
-          customGroupNames: data.customGroupNames || {},
-          theme: data.theme || 'dark',
-          autoSnapshot: data.autoSnapshot !== false
-        };
-        await chrome.storage.local.set(converted);
-      }
-      
-      await loadStorageData();
-      await loadExtensions();
-      alert('設定匯入成功！');
-      await logChange(`匯入設定資料（${version}）`);
-      
-      // 刷新頁面
-      location.reload();
-      
+                // 基本類型：使用導入的值
+                finalData[key] = importedData[key];
+              }
+            });
+          } else {
+            // 覆蓋模式：完全替換
+            finalData = { ...importedData };
+            delete finalData.version;
+            delete finalData.exportDate;
+            delete finalData.exportType;
+          }
+          
+          // 保存資料
+          await chrome.storage.local.set(finalData);
+          
+          overlay.remove();
+          dialog.remove();
+          
+          await logChange(`導入資料：${typeNames[importType]}（${mode === 'merge' ? '合併' : '覆蓋'}模式）`);
+          alert('✅ 導入成功！頁面將重新載入...');
+          
+          // 重新載入頁面
+          setTimeout(() => location.reload(), 500);
     } catch (error) {
       console.error('Import failed:', error);
-      alert('匯入失敗：' + error.message);
+          alert('❌ 導入失敗：' + error.message);
+        }
+      };
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert('❌ 導入失敗：' + error.message);
     }
   };
   
   input.click();
+}
+
+/**
+ * 重置所有資料
+ */
+async function resetAllData() {
+  if (!confirm('⚠️ 警告：此操作將清除所有自定義配置、群組、快照和歷史記錄。\n\n確定要繼續嗎？')) {
+    return;
+  }
+  
+  if (!confirm('⚠️ 最後確認：所有資料將被永久刪除，無法恢復！\n\n確定要繼續嗎？')) {
+    return;
+  }
+  
+  try {
+    await chrome.storage.local.clear();
+    await logChange('重置所有資料');
+    alert('✅ 已重置所有資料，頁面將重新載入...');
+    setTimeout(() => location.reload(), 500);
+  } catch (error) {
+    console.error('Reset failed:', error);
+    alert('❌ 重置失敗：' + error.message);
+  }
+}
+
+/**
+ * 備份後重置
+ */
+async function backupBeforeReset() {
+  try {
+    // 先導出完整備份
+    const data = await chrome.storage.local.get();
+    const backupData = {
+      version: '2.1',
+      exportDate: new Date().toISOString(),
+      exportType: 'all',
+      ...data
+    };
+    
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `extension-manager-backup-before-reset-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    
+    URL.revokeObjectURL(url);
+    
+    // 詢問是否繼續重置
+    if (confirm('✅ 備份已下載！\n\n現在要繼續重置所有資料嗎？')) {
+      await resetAllData();
+    }
+  } catch (error) {
+    console.error('Backup failed:', error);
+    alert('❌ 備份失敗：' + error.message);
+  }
 }
 
 /**
