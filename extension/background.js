@@ -15,26 +15,26 @@ chrome.management.onDisabled.addListener((info) => {
 chrome.management.onInstalled.addListener(async (info) => {
   console.log('Extension installed:', info.name);
   notifyExtensionUpdate();
-  
+
   // 為新安裝的擴充功能創建預設分類和元數據
   const result = await chrome.storage.local.get([
     'extensionGroups',
     'extensionDeviceGroups',
     'extensionMetadata'
   ]);
-  
-    const groups = result.extensionGroups || {};
+
+  const groups = result.extensionGroups || {};
   const deviceGroups = result.extensionDeviceGroups || {};
   const metadata = result.extensionMetadata || {};
-  
-    if (!groups[info.id]) {
+
+  if (!groups[info.id]) {
     groups[info.id] = 'other';
   }
-  
+
   if (!deviceGroups[info.id]) {
     deviceGroups[info.id] = 'all_devices';
   }
-  
+
   // 記錄安裝時間和基本信息
   if (!metadata[info.id]) {
     metadata[info.id] = {
@@ -51,7 +51,7 @@ chrome.management.onInstalled.addListener(async (info) => {
       source: 'installed'
     };
   }
-  
+
   await chrome.storage.local.set({
     extensionGroups: groups,
     extensionDeviceGroups: deviceGroups,
@@ -66,7 +66,7 @@ const USER_ACTION_TIMEOUT = 30000; // 30秒内认为是有用户操作的
 chrome.management.onUninstalled.addListener(async (id) => {
   console.log('Extension uninstalled:', id);
   notifyExtensionUpdate();
-  
+
   try {
     // 检查是否有用户操作记录
     const hasRecentUserAction = recentUserActions.has(id);
@@ -82,12 +82,12 @@ chrome.management.onUninstalled.addListener(async (id) => {
       'extensionDeviceGroups',
       'extensionDescriptions'
     ]);
-    
+
     const extensionMetadata = storageData.extensionMetadata || {};
     const extensionGroups = storageData.extensionGroups || {};
     const extensionDeviceGroups = storageData.extensionDeviceGroups || {};
     const extensionDescriptions = storageData.extensionDescriptions || {};
-    
+
     // 构建扩展信息对象
     const extensionInfo = {
       id: id,
@@ -106,17 +106,17 @@ chrome.management.onUninstalled.addListener(async (id) => {
 
     // 从活跃扩展中移除，但保留在元数据中
     chrome.storage.local.get(['extensionGroups', 'extensionDescriptions', 'extensionDeviceGroups'], (result) => {
-    const groups = result.extensionGroups || {};
-    const descriptions = result.extensionDescriptions || {};
+      const groups = result.extensionGroups || {};
+      const descriptions = result.extensionDescriptions || {};
       const deviceGroups = result.extensionDeviceGroups || {};
-    
+
       // 移除活跃状态，但保留元数据记录
-    delete groups[id];
-    delete descriptions[id];
+      delete groups[id];
+      delete descriptions[id];
       delete deviceGroups[id];
-    
-    chrome.storage.local.set({ 
-      extensionGroups: groups,
+
+      chrome.storage.local.set({
+        extensionGroups: groups,
         extensionDescriptions: descriptions,
         extensionDeviceGroups: deviceGroups
       });
@@ -130,8 +130,8 @@ chrome.management.onUninstalled.addListener(async (id) => {
 // 通知UI更新
 function notifyExtensionUpdate() {
   // 向所有監聽的頁面發送更新通知
-  chrome.runtime.sendMessage({ 
-    type: 'EXTENSION_UPDATE' 
+  chrome.runtime.sendMessage({
+    type: 'EXTENSION_UPDATE'
   }).catch(() => {
     // 忽略沒有監聽者的錯誤
   });
@@ -145,14 +145,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true; // 保持訊息通道開放
   }
-  
+
   if (request.type === 'TOGGLE_EXTENSION') {
     chrome.management.setEnabled(request.id, request.enabled, () => {
       sendResponse({ success: true });
     });
     return true;
   }
-  
+
   if (request.type === 'UNINSTALL_EXTENSION') {
     // 记录用户操作，用于区分手动删除和自动删除
     recordUserAction(request.id, 'uninstall');
@@ -166,6 +166,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // 允许用户手动更改删除类型标注
     updateDeleteType(request.extensionId, request.deleteType);
     sendResponse({ success: true });
+    return true;
+  }
+
+  if (request.type === 'FETCH_STORE_DATA') {
+    fetch(`https://chromewebstore.google.com/detail/${request.id}?hl=zh-TW`)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.text();
+      })
+      .then(html => sendResponse({ success: true, html: html }))
+      .catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }
 });
@@ -289,7 +300,7 @@ chrome.action.onClicked.addListener(() => {
 // 初始化：設置預設的分類映射
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Extension Manager v2.0 installed');
-  
+
   // 初始化預設分類
   const defaultGroups = {
     // 廣告封鎖與隱私
@@ -297,36 +308,36 @@ chrome.runtime.onInstalled.addListener(() => {
     'ldadnegmmggmmgbijlnmjhcnjcpgkfdj': 'adblocker', // youBlock
     'eimadpbcbfnmbkopoojfekhnkhdbieeh': 'adblocker', // Dark Reader
     'onepmapfbjohnegdmfhndpefjkppbjkm': 'adblocker', // SuperCopy
-    
+
     // AI助手
     'ojnbohmppadfgpejeebfnmnknjdlckgj': 'ai', // AIPRM
     'ofpnmcalabcbjgholdjcjblkibolbppb': 'ai', // Monica
     'befflofjcniongenjmbkgkoljhgliihe': 'ai', // TinaMind
     'enkmmegahkfbohjlnmmmkiicmhoglnne': 'ai', // 小結
     'ilmdofdhpnhffldihboadndccenlnfll': 'ai', // ChatGPT Export
-    
+
     // 生產力工具
     'knheggckgoiihginacbkhaalnibhilkk': 'productivity', // Notion
     'chphlpgkkbolifaimnlloiipkdnihall': 'productivity', // OneTab
     'lpcaedmchfhocbbapmcbpinfpgnhiddi': 'productivity', // Google Keep
     'efaidnbmnnnibpcajpcglclefindmkaj': 'productivity', // Adobe PDF
-    
+
     // 開發工具
     'bkhaagjahfmjljalopjnoealnfndnagc': 'dev', // Octotree
     'dhdgffkkebhmkfjojejmpbldmpobfkfo': 'dev', // 篡改猴
     'jlmpjdjjbgclbocgajdjefcidcncaied': 'dev', // daily.dev
-    
+
     // YouTube工具
     'hjfkenebldkfgibelglepinlabpjfbll': 'youtube', // No Shorts
     'nmmicjeknamkfloonkhhcjmomieiodli': 'youtube', // Summary
     'nghlhmhjdlbcgnmjffpeialapbcnajig': 'youtube', // 翻譯修正
-    
+
     // 翻譯工具
     'aapbdbdomjkkjkaonfhkkikfgjllcleb': 'translate', // Google翻譯
     'bpoadfkcbjbfhfodiogcnhhhpibjhbnh': 'translate', // 沉浸式翻譯
   };
-  
-  chrome.storage.local.set({ 
+
+  chrome.storage.local.set({
     extensionGroups: defaultGroups,
     autoSnapshot: true,
     theme: 'dark',

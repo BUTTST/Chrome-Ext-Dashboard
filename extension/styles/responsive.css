@@ -1,0 +1,97 @@
+/* Chrome 擴充功能管理器 - 響應式佈局 */
+
+@media (max-width: 1024px) {
+    .sidebar {
+        min-width: 240px;
+        width: 240px;
+        padding: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        min-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 16px;
+    }
+
+    .main-content {
+        flex-direction: column;
+    }
+
+    .content {
+        padding: 16px;
+    }
+
+    .toolbar {
+        gap: 8px;
+        padding: 12px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .right-panel {
+        width: 100%;
+        min-width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        padding: 16px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .content {
+        padding: 20px;
+    }
+
+    .right-panel {
+        min-width: 280px;
+        width: 280px;
+        padding: 20px;
+    }
+}
+
+/* 擴充功能網格響應式 */
+@media (min-width: 1400px) {
+    .extensions-grid.compact {
+        grid-template-columns: repeat(5, 1fr);
+    }
+
+    .extensions-grid.normal {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .extensions-grid.comfortable {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .extensions-grid.compact {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .extensions-grid.normal {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .extensions-grid.comfortable {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .extensions-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+@media (max-width: 600px) {
+    .extensions-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}

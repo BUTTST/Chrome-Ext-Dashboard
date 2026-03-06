@@ -195,6 +195,9 @@
 - ✅ 快照和歷史記錄
 - ✅ 響應式設計
 
+### v2.0 - v2.1 更新修復
+詳細的更新內容請參見：[📄 專案更新報告歸納](./docs/reports/README.md)
+
 
 ### 📁 項目結構
 ```
@@ -206,6 +209,8 @@
 │   ├── options.html/js    # 主要管理介面
 │   ├── styles/            # CSS 樣式檔案
 │   └── icons/             # 圖標檔案
+├── docs/                   # 專案文件與更新報告
+│   └── reports/           # 安裝手冊與更新詳情
 ├── assets/                 # README 圖片資源
 ├── README.md               # 專案說明文件
 └── LICENSE                 # 授權協議

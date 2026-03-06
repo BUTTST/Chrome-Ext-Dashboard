@@ -10,6 +10,11 @@
     "tabs"
   ],
   
+  "host_permissions": [
+    "https://chromewebstore.google.com/*",
+    "https://translate.googleapis.com/*"
+  ],
+  
   "background": {
     "service_worker": "background.js"
   },

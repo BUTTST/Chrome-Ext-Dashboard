@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -203,6 +204,7 @@
         }
     </style>
 </head>
+
 <body data-theme="dark">
     <div class="popup-header">
         <h1>🎯 管理器</h1>
@@ -210,8 +212,11 @@
     </div>
 
     <div class="popup-content">
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="搜尋擴充功能...">
+        <div class="search-box" style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <input type="text" id="searchInput" placeholder="搜尋擴充功能..." style="flex: 1; min-width: 0;">
+            <button id="disableGroupBtn" class="action-btn"
+                style="padding: 6px 10px; font-size: 11px; background: var(--warning-color); color: white; border: none; border-radius: 4px;"
+                title="停用當前列表中的擴充功能">⛔ 停用群組</button>
         </div>
 
         <div id="loadingState" class="loading">
@@ -228,10 +233,14 @@
     </div>
 
     <div class="popup-footer">
-        <button class="footer-btn" id="snapshotBtn">📸 快照</button>
-        <button class="footer-btn" id="settingsBtn">⚙️ 設定</button>
+        <button class="footer-btn" id="snapshotBtn" style="padding: 8px 4px;">📸 快照</button>
+        <button class="footer-btn warning" id="disableAllBtn" style="padding: 8px 4px;" title="關閉所有其他擴充功能">🚫
+            全關</button>
+        <button class="footer-btn" id="restoreBtn" style="padding: 8px 4px;" title="恢復最新快照">🔄 恢復</button>
+        <button class="footer-btn" id="settingsBtn" style="padding: 8px 4px;">⚙️ 設定</button>
     </div>
 
     <script src="popup.js"></script>
 </body>
+
 </html>

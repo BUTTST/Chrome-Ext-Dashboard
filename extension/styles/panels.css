@@ -1,0 +1,113 @@
+/* Chrome 擴充功能管理器 - 面板與設定 */
+
+/* 右側面板 */
+.panel-section {
+    margin-bottom: 32px;
+}
+
+.panel-section h3 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* 快照 */
+.snapshot-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 14px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.snapshot-item:hover {
+    box-shadow: 0 2px 8px rgba(102, 217, 239, 0.2);
+    border-color: var(--accent-color);
+}
+
+.snapshot-time {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+}
+
+.snapshot-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.auto-snapshot-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 16px;
+}
+
+.auto-snapshot-toggle label {
+    font-size: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+/* 保留記錄區 */
+.archive-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.archive-item .count {
+    background: var(--bg-tertiary);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    min-width: 24px;
+    text-align: center;
+}
+
+/* 設定頁面 */
+.settings-section-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-row:last-child {
+    border-bottom: none;
+}
+
+.settings-info {
+    flex: 1;
+}
+
+.settings-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.settings-desc {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
